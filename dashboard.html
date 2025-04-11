@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .nav-links {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .nav-links a {
+            padding: 10px 20px;
+            background: white;
+            color: #3498db;
+            text-decoration: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .nav-links a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .metric-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+        }
+        .metric-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        .chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+            max-width: 500px;
+            margin: 0 auto 20px;
+            height: 250px;
+        }
+        .chart-container:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .order-history {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .order-history:hover {
+            transform: translateY(-5px);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #3498db;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .refresh-icon {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="refresh-indicator">
+        <div class="refresh-icon"></div>
+        <span>Last updated: <span id="last-update">Just now</span></span>
+    </div>
+    
+    <div class="dashboard">
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/cart.html">Cart</a>
+        </div>
+        
+        <h1>E-commerce Dashboard</h1>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" id="total-sales">$0</div>
+                <div class="metric-label">Total Sales</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="total-orders">0</div>
+                <div class="metric-label">Total Orders</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="avg-order-value">$0</div>
+                <div class="metric-label">Average Order Value</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Top Selling Products</h2>
+            <canvas id="topProductsChart"></canvas>
+        </div>
+
+        <div class="order-history">
+            <h2>Recent Orders</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="order-history-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let topProductsChart = null;
+
+        // Function to update the last update time
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+
+        // Fetch and display metrics
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/metrics');
+                const metrics = await response.json();
+                
+                document.getElementById('total-sales').textContent = `$${metrics.total_sales.toFixed(2)}`;
+                document.getElementById('total-orders').textContent = metrics.total_orders;
+                document.getElementById('avg-order-value').textContent = `$${metrics.avg_order_value.toFixed(2)}`;
+                
+                // Create or update top products chart
+                const ctx = document.getElementById('topProductsChart').getContext('2d');
+                if (topProductsChart) {
+                    topProductsChart.destroy();
+                }
+                
+                topProductsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: metrics.top_products.map(p => p[0]),
+                        datasets: [{
+                            label: 'Quantity Sold',
+                            data: metrics.top_products.map(p => p[1]),
+                            backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            barThickness: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    },
+                                    maxTicksLimit: 5
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 800
+                        }
+                    }
+                });
+
+                updateLastUpdateTime();
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        // Fetch and display order history
+        async function loadOrderHistory() {
+            try {
+                const response = await fetch('/api/order-history');
+                const orders = await response.json();
+                
+                const tbody = document.getElementById('order-history-body');
+                tbody.innerHTML = orders.map(order => `
+                    <tr>
+                        <td>${order[2]}</td>
+                        <td>${order[3]}</td>
+                        <td>$${order[4]}</td>
+                        <td>${new Date(order[5]).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+
+                updateLastUpdateTime();
+            } catch (error) {
+                console.error('Error loading order history:', error);
+            }
+        }
+
+        // Function to refresh all data
+        async function refreshAllData() {
+            await Promise.all([
+                loadMetrics(),
+                loadOrderHistory()
+            ]);
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAllData();
+            // Set up auto-refresh every 5 seconds
+            setInterval(refreshAllData, 5000);
+        });
+    </script>
+</body>
+</html> 

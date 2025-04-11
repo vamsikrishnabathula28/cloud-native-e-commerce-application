@@ -1,0 +1,55 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: product-service
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: product-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: product-service-alerts
+  labels:
+    release: prometheus
+spec:
+  groups:
+  - name: product-service
+    rules:
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: High error rate on product service
+        description: Error rate is {{ $value }}% for the last 5 minutes
+    
+    - alert: HighLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: High latency on product service
+        description: 95th percentile latency is {{ $value }}s
+    
+    - alert: ServiceDown
+      expr: up{job="product-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: Product service is down
+        description: The product service has been down for more than 1 minute 

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .cart-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .cart-items {
+            margin-bottom: 20px;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cart-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        .cart-item-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .cart-item-details {
+            flex-grow: 1;
+        }
+        .cart-item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .cart-item-quantity button {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .cart-item-quantity button:hover {
+            background-color: #2980b9;
+        }
+        .cart-total {
+            text-align: right;
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .checkout-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .checkout-button:hover {
+            background-color: #27ae60;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            margin-right: 15px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .empty-cart {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .checkout-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .payment-form {
+            margin-top: 20px;
+        }
+        #card-element {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .payment-errors {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cart-container">
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">Dashboard</a>
+        </div>
+        
+        <h1>Shopping Cart</h1>
+        
+        <div class="cart-items" id="cart-items">
+            <!-- Cart items will be dynamically added here -->
+        </div>
+        
+        <div class="cart-total">
+            Total: $<span id="cart-total">0.00</span>
+        </div>
+        
+        <div class="checkout-section">
+            <h2>Checkout</h2>
+            <div class="total-price">
+                Total: $<span id="total-price">0.00</span>
+            </div>
+            <div class="payment-form">
+                <div id="card-element"></div>
+                <div id="payment-errors" class="payment-errors"></div>
+                <button onclick="handleCheckout()" id="checkout-button">Proceed to Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        // Function to update cart display
+        function updateCartDisplay() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartTotalElement = document.getElementById('cart-total');
+            
+            // Get cart from localStorage
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = `
+                    <div class="empty-cart">
+                        <h2>Your cart is empty</h2>
+                        <p>Looks like you haven't added any items to your cart yet.</p>
+                        <a href="index.html" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px;">Continue Shopping</a>
+                    </div>
+                `;
+                cartTotalElement.textContent = '0.00';
+                return;
+            }
+            
+            let total = 0;
+            cartItemsContainer.innerHTML = cart.map(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                
+                return `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <img src="${item.image}" alt="${item.name}">
+                            <div class="cart-item-details">
+                                <h3>${item.name}</h3>
+                                <p>$${item.price}</p>
+                            </div>
+                        </div>
+                        <div class="cart-item-quantity">
+                            <button onclick="updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            cartTotalElement.textContent = total.toFixed(2);
+        }
+        
+        // Function to update item quantity
+        function updateQuantity(productId, newQuantity) {
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            
+            if (newQuantity < 1) {
+                cart = cart.filter(item => item.id !== productId);
+            } else {
+                cart = cart.map(item => 
+                    item.id === productId ? {...item, quantity: newQuantity} : item
+                );
+            }
+            
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartDisplay();
+        }
+        
+        // Initialize Stripe
+        const stripe = Stripe('your-publishable-key');
+        const elements = stripe.elements();
+        const card = elements.create('card');
+        card.mount('#card-element');
+
+        // Handle card validation errors
+        card.addEventListener('change', function(event) {
+            const displayError = document.getElementById('payment-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
+
+        async function handleCheckout() {
+            const displayError = document.getElementById('payment-errors');
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            
+            if (cart.length === 0) {
+                displayError.textContent = 'Your cart is empty';
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            try {
+                // Create payment intent
+                const response = await fetch('/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: total,
+                        currency: 'usd'
+                    })
+                });
+
+                const { clientSecret } = await response.json();
+
+                // Confirm payment
+                const result = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: card,
+                        billing_details: {
+                            name: 'Customer Name' // You can get this from user input
+                        }
+                    }
+                });
+
+                if (result.error) {
+                    displayError.textContent = result.error.message;
+                } else {
+                    if (result.paymentIntent.status === 'succeeded') {
+                        // Save order to database
+                        const orderResponse = await fetch('/api/order', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                items: cart
+                            })
+                        });
+
+                        if (orderResponse.ok) {
+                            // Clear cart and show success message
+                            localStorage.removeItem('cart');
+                            updateCartDisplay();
+                            alert('Payment successful! Your order has been placed.');
+                            window.location.href = '/';
+                        } else {
+                            displayError.textContent = 'Failed to save order';
+                        }
+                    }
+                }
+            } catch (error) {
+                displayError.textContent = 'An error occurred during payment';
+                console.error('Payment error:', error);
+            }
+        }
+        
+        // Initialize cart display
+        updateCartDisplay();
+    </script>
+</body>
+</html> 
